@@ -18,3 +18,17 @@ require(TTR)
 
 airline_dataset = read.csv("air traffic.csv")
 ```
+
+Data Analysis Plan
+1. Intro to general research question
+-- Some motivation for said research question
+2. Where it came from? How was it collected? What are the cases/variables?
+-- Kaggle desc and describing variables in data
+3. Short data analysis plan
+-- Collect/Clean
+-- Visualize data (few TS graphs)
+-- Observing stationality of series
+-- Developing charts
+-- Predicting and discussing what statistical methods will be useful in answering our general research question
+-- What should we expect from the stat methods to support the research question
+4. Dataset
