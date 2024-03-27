@@ -9,3 +9,12 @@ This is the Airline Traffic Time Series Project.
 By: Harshith Samayamantula, Devan Pandya
 3/27/24
 Time Series 
+
+```{r}
+require(zoo)
+require(ggplot2)
+require(forecast)
+require(TTR)
+
+airline_dataset = read.csv("air traffic.csv")
+```
