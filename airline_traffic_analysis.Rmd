@@ -105,7 +105,7 @@ airline_dataset$Int_ASM <- as.numeric(gsub(",", "", airline_dataset$Int_ASM))
 airline_dataset$ASM <- as.numeric(gsub(",", "", airline_dataset$ASM))
 str(airline_dataset)
 ```
-
+#### Converting to TS
 ```{r}
 ts_airline <- ts(airline_dataset[, c("Dom_Pax", "Int_Pax", "Pax", "Dom_Flt", "Int_Flt", "Flt", "Dom_RPM", "Int_RPM", "RPM", "Dom_ASM", "Int_ASM", "ASM", "Dom_LF", "Int_LF", "LF")], start = c(2003, 1), frequency = 12)
 ```
@@ -113,6 +113,8 @@ ts_airline <- ts(airline_dataset[, c("Dom_Pax", "Int_Pax", "Pax", "Dom_Flt", "In
 ```{r}
 print(window(ts_airline, start = c(2003, 1), end = c(2003, 5)))
 ```
+#### Visualizing Data
+
 ```{r}
 par(mar = c(3, 3, 1, 1))
 par(mfrow=c(5, 3)) # Set up a 4x3 grid for plotting
@@ -120,6 +122,8 @@ for (i in 1:15) {
   plot(ts_airline[, i], main = colnames(ts_airline)[i], xlab = "Year", ylab = colnames(ts_airline)[i], type = "l")
 }
 ```
+
+#### Narrowing Dataset
 
 We are choosing to focus on the domestic changes in air traffic. For this, we will explore the Domestic Passengers, Domestic Flight Revenue, and the Domestic Load Factor.
 
@@ -130,7 +134,19 @@ plot(ts_airline[, "Dom_RPM"], main = "Domestic Flight Revenue", xlab = "Year", y
 
 plot(ts_airline[, "Dom_LF"], main = "Domestic Load Factors", xlab = "Year", ylab = "Load Factor", type = "l")
 ```
+##### Visualizing Subset of Data Pertaining to COVID-19
+We chose to take a closer look at the time period of Jan 2020 to May 2023, the dates of the Covid-19 pandemic.
+```{r}
+ts_subset <- window(ts_airline, start = c(2020, 1), end = c(2023, 5))
 
+plot(ts_subset[, "Dom_Pax"], main = "Domestic Passenger Count (Jan 2020 - May 2023)", xlab = "Year", ylab = "Passenger Count", type = "l")
+
+plot(ts_subset[, "Dom_RPM"], main = "Domestic Flight Revenue (Jan 2020 - May 2023)", xlab = "Year", ylab = "Revenue", type = "l")
+
+plot(ts_subset[, "Dom_LF"], main = "Domestic Load Factors (Jan 2020 - May 2023)", xlab = "Year", ylab = "Load Factor", type = "l")
+```
+
+#### Decomposition
 ```{r}
 decomp_dom_pax <- decompose(ts_airline[, "Dom_Pax"])
 
@@ -144,17 +160,7 @@ decomp_dom_lf <- decompose(ts_airline[, "Dom_LF"])
 
 plot(decomp_dom_lf)
 ```
-
-We chose to take a closer look at the time period of Jan 2020 to May 2023, the dates of the Covid-19 pandemic.
-```{r}
-ts_subset <- window(ts_airline, start = c(2020, 1), end = c(2023, 5))
-
-plot(ts_subset[, "Dom_Pax"], main = "Domestic Passenger Count (Jan 2020 - May 2023)", xlab = "Year", ylab = "Passenger Count", type = "l")
-
-plot(ts_subset[, "Dom_RPM"], main = "Domestic Flight Revenue (Jan 2020 - May 2023)", xlab = "Year", ylab = "Revenue", type = "l")
-
-plot(ts_subset[, "Dom_LF"], main = "Domestic Load Factors (Jan 2020 - May 2023)", xlab = "Year", ylab = "Load Factor", type = "l")
-```
+#### Prepping Data for Model Fitting
 
 ```{r}
 pre_pandemic_start <- c(2003, 1)  # January 2003
@@ -198,9 +204,103 @@ test_data = rbind(pre_test_data, pandemic_test_data, post_test_data)
 dim(train_data)
 dim(test_data)
 ```
+By doing this, we have prepped our data set to be used for training various models and testing the accuracy while taking into account the large disturbance in data that was caused due to COVID-19
+
+#### Analyzing Stationarity of Data
+##### Domestic Passengers
+```{r}
+ts_pre_pandemic <- window(ts_airline, start = c(2003,1), end = c(2019,12))
+
+ur.kpss(ts_airline[, "Dom_Pax"]) %>% summary()      #Stationary
+ur.kpss(ts_pre_pandemic[, "Dom_Pax"]) %>% summary() #Non-Stationary
+```
+Based on the KPSS test, we identified that the entire dataset is stationary, but the subset of pre-pandemic data is not stationary.
+
+```{r}
+autoplot(acf(ts_airline[, "Dom_Pax"]))
+autoplot(acf(ts_pre_pandemic[, "Dom_Pax"]))
+
+```
+These ACF graphs reconfirm the results of the KPSS test.
+```{r}
+
+plot(density(ts_airline[, "Dom_Pax"]), main = "Density Plot of Dom_Pax Time Series (2003 - 2023)", xlab = "Dom_Pax Values", ylab = "Density")
+plot(density(ts_pre_pandemic[, "Dom_Pax"]), main = "Density Plot of Dom_Pax Time Series (ts_pre_pandemic)", xlab = "Dom_Pax Values", ylab = "Density")
+
+```
+These density plots provide a visual look into how the data is distributed allowing us to better understand the nature of the data.
+```{r}
+ggsubseriesplot(ts_airline[, "Dom_Pax"])
+ggsubseriesplot(ts_pre_pandemic[, "Dom_Pax"])
+
+```
+These graphs reiterate the seasonality of the data.
 
 
--- Observing stationality of series
--- Developing charts
--- Predicting and discussing what statistical methods will be useful in answering our general research question
--- What should we expect from the stat methods to support the research question
+##### Domestic Revenue Passenger Miles
+```{r}
+
+ur.kpss(ts_airline[, "Dom_RPM"]) %>% summary()      #Non-Stationary (5% Level)
+ur.kpss(ts_pre_pandemic[, "Dom_RPM"]) %>% summary() #Non-Stationary
+
+```
+Based on the KPSS test, we identified that both the entire dataset and the subset of pre-pandemic data are not stationary given a 5% significance level.
+
+```{r}
+autoplot(acf(ts_airline[, "Dom_RPM"]))
+autoplot(acf(ts_pre_pandemic[, "Dom_RPM"]))
+
+```
+These ACF graphs reconfirm the results of the KPSS test.
+
+```{r}
+plot(density(ts_airline[, "Dom_RPM"]), main = "Density Plot of Dom_RPM Time Series (2003 - 2023)", xlab = "Dom_RPM Values", ylab = "Density")
+plot(density(ts_pre_pandemic[, "Dom_RPM"]), main = "Density Plot of Dom_RPM Time Series (ts_pre_pandemic)", xlab = "Dom_RPM Values", ylab = "Density")
+
+```
+These density plots provide a visual look into how the data is distributed allowing us to better understand the nature of the data.
+
+```{r}
+ggsubseriesplot(ts_airline[, "Dom_RPM"])
+ggsubseriesplot(ts_pre_pandemic[, "Dom_RPM"])
+
+```
+These graphs reiterate the seasonality of the data.
+
+##### Domestic Load Factor
+```{r}
+ur.kpss(ts_airline[, "Dom_LF"]) %>% summary()       #Stationary
+ur.kpss(ts_pre_pandemic[, "Dom_LF"]) %>% summary()  #Non-Stationary
+```
+Based on the KPSS test, we identified that the entire dataset is stationary, but the subset of pre-pandemic data is not stationary.
+
+```{r}
+autoplot(acf(ts_airline[, "Dom_LF"]))
+autoplot(acf(ts_pre_pandemic[, "Dom_LF"]))
+
+```
+These ACF graphs reconfirm the results of the KPSS test.
+
+```{r}
+plot(density(ts_airline[, "Dom_LF"]), main = "Density Plot of Dom_LF Time Series (2003 - 2023)", xlab = "Dom_LF Values", ylab = "Density")
+plot(density(ts_pre_pandemic[, "Dom_LF"]), main = "Density Plot of Dom_LF Time Series (Pre-Pandemic)", xlab = "Dom_LF Values", ylab = "Density")
+```
+These density plots provide a visual look into how the data is distributed allowing us to better understand the nature of the data.
+
+```{r}
+ggsubseriesplot(ts_airline[, "Dom_LF"])
+ggsubseriesplot(ts_pre_pandemic[, "Dom_LF"])
+
+```
+These graphs reiterate the seasonality of the data.
+
+## Future Plans
+
+- We believe that because of the non-stationarity of the data, we will have to use differencing to make it stationary. 
+  - This will be useful when we try to answer the research question relation to correlation
+- We will then proceed to use a variety of models to predict/forecast different variables
+  - We will use models like: Linear Regression, Quadratic Regression, Logistic Regression, ARIMA, SARIMA etc.
+  - We will see how those models compare to naive models like SES, MES, and Holt/Holt-Winters.
+- We will then assess how accurate we are and discuss how the COVID-19 pandemic affected our modeling.
+  - We will use various accuracy metrics including: MAPE, MASE, Residual analysis
+
