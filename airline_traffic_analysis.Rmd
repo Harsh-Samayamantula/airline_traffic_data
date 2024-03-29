@@ -19,11 +19,16 @@ require(TTR)
 airline_dataset = read.csv("air traffic.csv")
 ```
 
-Data Analysis Plan
-1. Intro to general research question
+# Data Analysis Plan
 
--- Some motivation for said research question
-2. Where it came from? How was it collected? What are the cases/variables?
+## Research Question
+Some research questions we want to explore include the following:
+- Can we accurately forecast future air travel demand based on historical data? Specifically, passenger numbers and revenue passenger-miles?
+  - The result is testing various methods for forecasting accuracy and discussing the level of accuracy we're able to attain.
+- Is there a correlation between the number of flights (Flt) and total passenger volume (Pax)? How do revenue passenger-miles (RPM) correlate with the number of flights and passenger volume?
+  - Correlation will be shown through autocorrelation and partial autocorrelation analysis, identifying if the data is stationary, and running other tests.
+
+## Description
 
 The air traffic dataset comes from Kaggle. It contains non-seasonally adjusted monthly air traffic data for all commercial U.S. air carriers from January 2003 to September 2023. It is being used under the US Government Works License and is collected by the US Department of Transportation Bureau of Transportation Statistics. The variables included in the dataset are listed as follows:
 
