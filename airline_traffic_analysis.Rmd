@@ -16,13 +16,33 @@ require(ggplot2)
 require(forecast)
 require(TTR)
 
-airline_dataset = read.csv("air traffic.csv");
+airline_dataset = read.csv("air traffic.csv")
 ```
 
 Data Analysis Plan
 1. Intro to general research question
+
 -- Some motivation for said research question
 2. Where it came from? How was it collected? What are the cases/variables?
+
+The air traffic dataset comes from Kaggle. It contains non-seasonally adjusted monthly air traffic data for all commercial U.S. air carriers from January 2003 to September 2023. It is being used under the US Government Works License and is collected by the US Department of Transportation Bureau of Transportation Statistics. The variables included in the dataset are listed as follows:
+
+1. Year: Year
+2. Month: Month
+3. Dom_Pax: Domestic Air Travel Passengers
+4. Int_Pax: International Air Travel Passengers
+5. Pax: Total Air Travel Passengers
+6. Dom_Flt: Number of Flights (Domestic)
+7. Int_Flt: Number of Flights (International)
+8. Flt: Number of Flights (Total)
+9. Dom_RPM: Revenue Passenger Miles (Domestic)
+10. Int_RPM: Revenue Passenger Miles (International)
+
+Revenue Passenger-miles = the number of passengers and the distance flown in thousands (000)
+Available Seat-miles = the number of seats and the distance flown in thousands (000)
+Load Factor = passenger-miles as a proportion of available seat-miles in percent (%)
+
+
 -- Kaggle desc and describing variables in data
 3. Short data analysis plan
 -- Collect/Clean
