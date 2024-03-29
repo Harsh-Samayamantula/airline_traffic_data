@@ -15,6 +15,10 @@ require(zoo)
 require(ggplot2)
 require(forecast)
 require(TTR)
+library(fpp2)
+require(lubridate)
+library(tseries)
+library(urca)
 
 airline_dataset = read.csv("air traffic.csv")
 ```
@@ -117,10 +121,85 @@ for (i in 1:15) {
 }
 ```
 
+We are choosing to focus on the domestic changes in air traffic. For this, we will explore the Domestic Passengers, Domestic Flight Revenue, and the Domestic Load Factor.
+
+```{r}
+plot(ts_airline[, "Dom_Pax"], main = "Domestic Passenger", xlab = "Year", ylab = "Passenger Count", type = "l")
+
+plot(ts_airline[, "Dom_RPM"], main = "Domestic Flight Revenue", xlab = "Year", ylab = "Revenue", type = "l")
+
+plot(ts_airline[, "Dom_LF"], main = "Domestic Load Factors", xlab = "Year", ylab = "Load Factor", type = "l")
+```
+
+```{r}
+decomp_dom_pax <- decompose(ts_airline[, "Dom_Pax"])
+
+plot(decomp_dom_pax)
+
+decomp_dom_rpm <- decompose(ts_airline[, "Dom_RPM"])
+
+plot(decomp_dom_rpm)
+
+decomp_dom_lf <- decompose(ts_airline[, "Dom_LF"])
+
+plot(decomp_dom_lf)
+```
+
+We chose to take a closer look at the time period of Jan 2020 to May 2023, the dates of the Covid-19 pandemic.
+```{r}
+ts_subset <- window(ts_airline, start = c(2020, 1), end = c(2023, 5))
+
+plot(ts_subset[, "Dom_Pax"], main = "Domestic Passenger Count (Jan 2020 - May 2023)", xlab = "Year", ylab = "Passenger Count", type = "l")
+
+plot(ts_subset[, "Dom_RPM"], main = "Domestic Flight Revenue (Jan 2020 - May 2023)", xlab = "Year", ylab = "Revenue", type = "l")
+
+plot(ts_subset[, "Dom_LF"], main = "Domestic Load Factors (Jan 2020 - May 2023)", xlab = "Year", ylab = "Load Factor", type = "l")
+```
+
+```{r}
+pre_pandemic_start <- c(2003, 1)  # January 2003
+pre_pandemic_end <- c(2019, 12)   # December 2019
+pandemic_start <- c(2020, 1)      # January 2020
+pandemic_end <- c(2023, 5)        # May 2023
+post_pandemic_end <- c(2023, 9)   # September 2023 (End of dataset)
+
+pre_pandemic_data = window(ts_airline, start = pre_pandemic_start, end = pre_pandemic_end)
+pandemic_data = window(ts_airline, start = pandemic_start, end = pandemic_end)
+post_pandemic_data = window(ts_airline, start = pandemic_end, end = post_pandemic_end)
+
+dim(pre_pandemic_data)
+dim(pandemic_data)
+dim(post_pandemic_data)
+```
+Splitting the pre-pandemic and pandemic data into training and testing chunks and then aggregating to generate a consolidated training and testing dataset.
+
+```{r}
+num_obs_pre_train = 163
+num_obs_pre_test = 41
+num_obs_pandemic_train = 32
+num_obs_pandemic_test = 9
+num_obs_post_test = 5
+
+pre_train_data <- window(pre_pandemic_data, start = c(2003, 1), end = c(2016, 7))
+pre_test_data <- window(pre_pandemic_data, start = c(2016, 8), end = c(2019, 12))
+pandemic_train_data <- window(pandemic_data, start = c(2020, 1), end = c(2022, 8))
+pandemic_test_data <- window(pandemic_data, start = c(2022, 9), end = c(2023,5))
+post_test_data = post_pandemic_data
+
+dim(pre_train_data)
+dim(pre_test_data)
+dim(pandemic_train_data)
+dim(pandemic_test_data)
+dim(post_test_data)
+
+train_data = rbind(pre_train_data, pandemic_train_data)
+test_data = rbind(pre_test_data, pandemic_test_data, post_test_data)
+
+dim(train_data)
+dim(test_data)
+```
 
 
--- Collect/Clean
--- Visualize data (few TS graphs)
 -- Observing stationality of series
 -- Developing charts
 -- Predicting and discussing what statistical methods will be useful in answering our general research question
