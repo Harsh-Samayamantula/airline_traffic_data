@@ -1,0 +1,11 @@
+---
+title: "Airline_Traffic_TS"
+output: html_document
+date: "2024-04-29"
+---
+
+This is part 2 of the Airline Traffic Time Series Project.
+
+By: Harshith Samayamantula, Devan Pandya
+4/29/24
+Time Series 
