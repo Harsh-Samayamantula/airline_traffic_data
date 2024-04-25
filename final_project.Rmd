@@ -9,3 +9,99 @@ This is part 2 of the Airline Traffic Time Series Project.
 By: Harshith Samayamantula, Devan Pandya
 4/29/24
 Time Series 
+
+```{r}
+require(zoo)
+require(ggplot2)
+require(forecast)
+require(TTR)
+library(fpp2)
+require(lubridate)
+library(tseries)
+library(urca)
+
+airline_dataset = read.csv("air traffic.csv")
+```
+
+## Research Question
+Some research questions we want to explore include the following:
+- Can we accurately forecast future air travel demand based on historical data? Specifically, passenger numbers and revenue passenger-miles?
+  - The result is testing various methods for forecasting accuracy and discussing the level of accuracy we're able to attain.
+- Is there a correlation between the number of flights (Flt) and total passenger volume (Pax)? How do revenue passenger-miles (RPM) correlate with the number of flights and passenger volume?
+  - Correlation will be shown through autocorrelation and partial autocorrelation analysis, identifying if the data is stationary, and running other tests.
+  
+```{r}
+print(airline_dataset)
+```
+
+
+```{r}
+airline_dataset$Year_Month = as.yearmon(paste(airline_dataset$Year, airline_dataset$Month), "%Y %m")
+```
+
+```{r}
+print(airline_dataset)
+str(airline_dataset)
+```
+```{r}
+# Convert character columns to numeric columns
+airline_dataset$Dom_Pax <- as.numeric(gsub(",", "", airline_dataset$Dom_Pax))
+airline_dataset$Int_Pax <- as.numeric(gsub(",", "", airline_dataset$Int_Pax))
+airline_dataset$Pax <- as.numeric(gsub(",", "", airline_dataset$Pax))
+airline_dataset$Dom_Flt <- as.numeric(gsub(",", "", airline_dataset$Dom_Flt))
+airline_dataset$Int_Flt <- as.numeric(gsub(",", "", airline_dataset$Int_Flt))
+airline_dataset$Flt <- as.numeric(gsub(",", "", airline_dataset$Flt))
+airline_dataset$Dom_RPM <- as.numeric(gsub(",", "", airline_dataset$Dom_RPM))
+airline_dataset$Int_RPM <- as.numeric(gsub(",", "", airline_dataset$Int_RPM))
+airline_dataset$RPM <- as.numeric(gsub(",", "", airline_dataset$RPM))
+airline_dataset$Dom_ASM <- as.numeric(gsub(",", "", airline_dataset$Dom_ASM))
+airline_dataset$Int_ASM <- as.numeric(gsub(",", "", airline_dataset$Int_ASM))
+airline_dataset$ASM <- as.numeric(gsub(",", "", airline_dataset$ASM))
+str(airline_dataset)
+```
+
+#### Converting to TS
+```{r}
+ts_airline <- ts(airline_dataset[, c("Dom_Pax", "Int_Pax", "Pax", "Dom_Flt", "Int_Flt", "Flt", "Dom_RPM", "Int_RPM", "RPM", "Dom_ASM", "Int_ASM", "ASM", "Dom_LF", "Int_LF", "LF")], start = c(2003, 1), frequency = 12)
+```
+
+
+```{r}
+print(window(ts_airline, start = c(2003, 1), end = c(2003, 5)))
+```
+
+#### Visualizing Data
+```{r}
+par(mar = c(3, 3, 1, 1))
+par(mfrow=c(5, 3)) # Set up a 4x3 grid for plotting
+for (i in 1:15) {
+  plot(ts_airline[, i], main = colnames(ts_airline)[i], xlab = "Year", ylab = colnames(ts_airline)[i], type = "l")
+}
+```
+
+#### Narrowing Dataset
+
+We are choosing to focus on the domestic changes in air traffic. For this, we will explore the Domestic Passengers, Domestic Flight Revenue, and the Domestic Load Factor.
+
+```{r}
+plot(ts_airline[, "Dom_Pax"], main = "Domestic Passenger", xlab = "Year", ylab = "Passenger Count", type = "l")
+
+plot(ts_airline[, "Dom_RPM"], main = "Domestic Flight Revenue", xlab = "Year", ylab = "Revenue", type = "l")
+
+plot(ts_airline[, "Dom_LF"], main = "Domestic Load Factors", xlab = "Year", ylab = "Load Factor", type = "l")
+```
+
+##### Visualizing Subset of Data Pertaining to COVID-19
+We chose to take a closer look at the time period of Jan 2020 to May 2023, the dates of the Covid-19 pandemic.
+```{r}
+ts_subset <- window(ts_airline, start = c(2020, 1), end = c(2023, 5))
+
+plot(ts_subset[, "Dom_Pax"], main = "Domestic Passenger Count (Jan 2020 - May 2023)", xlab = "Year", ylab = "Passenger Count", type = "l")
+
+plot(ts_subset[, "Dom_RPM"], main = "Domestic Flight Revenue (Jan 2020 - May 2023)", xlab = "Year", ylab = "Revenue", type = "l")
+
+plot(ts_subset[, "Dom_LF"], main = "Domestic Load Factors (Jan 2020 - May 2023)", xlab = "Year", ylab = "Load Factor", type = "l")
+```
+
+###### Analysis of unsual observations
+
