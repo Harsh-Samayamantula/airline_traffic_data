@@ -106,6 +106,7 @@ plot(ts_subset[, "Dom_LF"], main = "Domestic Load Factors (Jan 2020 - May 2023)"
 ###### Analysis of unsual observations
 Prior to the pandemic, generally domestic passenger count, domestic flight revenue, and domestic load factors had steadily increased over time. Overall, again excluding the pandemic era, all three data sets have strong seasonality, with the summer months being the busiest time for domestic air travel. Domestic passenger count and flight revenue experience a slight decrease in 2008, most likely due to the Great Recession. However, the airline industry began to bounce back by 2010. The Covid-19 pandemic represents the greatest anomaly in the data set as passenger traffic and revenues fell to record lows during the early months of the pandemic. Wit the widespread distribution of vaccines and subsequent reductions on travel restrictions, domestic air travel began to bounce back in early 2021. However, it wasn't until 2023 when domestic travel data return to their pre-pandemic levels. As the world continues to move past to the pandemic, it will be interesting to see how domestic air travel behaves as the U.S. grapples with rising fuel costs, a shortage of airplanes and staff, and soaring passenger demand. 
 
+
 #### Dividing data into pre/post pandemic and pandemic data sets
 ```{r}
 pre_pandemic_start <- c(2003, 1)  # January 2003
@@ -116,78 +117,140 @@ post_pandemic_end <- c(2023, 9)   # September 2023 (End of dataset)
 
 #Domestic Passenger Counts
 ts_pax_counts <- ts(airline_dataset[, c("Dom_Pax")], start = c(2003, 1), frequency = 12)
-pre_pax_counts <- window(ts_pax_counts, start = pre_pandemic_start, end = pre_pandemic_end)
-pandemic_pax_counts = window(ts_pax_counts, start = pandemic_start, end = pandemic_end)
-post_pax_counts = window(ts_pax_counts, start = pandemic_end, end = post_pandemic_end)
+pre_pandemic_pax <- window(ts_pax_counts, start = pre_pandemic_start, end = pre_pandemic_end)
+pandemic_data_pax <- window(ts_pax_counts, start = pandemic_start, end = pandemic_end)
+post_pandemic_pax = window(ts_pax_counts, start = pandemic_end, end = post_pandemic_end)
+
+length(pre_pandemic_pax)
+length(pandemic_data_pax)
+length(post_pandemic_pax)
 
 #Domestic Flight Revenue
 ts_revenue <- ts(airline_dataset[, c("Dom_RPM")], start = c(2003, 1), frequency = 12)
-pre_revenue <- window(ts_revenue, start = pre_pandemic_start, end = pre_pandemic_end)
-pandemic_revenue <- window(ts_revenue, start = pandemic_start, end = pandemic_end)
-post_revenue <- window(ts_revenue, start = pandemic_end, end = post_pandemic_end)
+pre_pandemic_revenue <- window(ts_revenue, start = pre_pandemic_start, end = pre_pandemic_end)
+pandemic_data_revenue <- window(ts_revenue, start = pandemic_start, end = pandemic_end)
+post_pandemic_revenue = window(ts_revenue, start = pandemic_end, end = post_pandemic_end)
+
+length(pre_pandemic_revenue)
+length(pandemic_data_revenue)
+length(post_pandemic_revenue)
 
 #Domestic Load Factors
 ts_LF <- ts(airline_dataset[, c("Dom_LF")], start = c(2003, 1), frequency = 12)
-pre_LF <- window(ts_LF, start = pre_pandemic_start, end = pre_pandemic_end)
-pandemic_LF <- window(ts_LF, start = pandemic_start, end = pandemic_end)
-post_LF <- window(ts_LF, start = pandemic_end, end = post_pandemic_end)
+pre_pandemic_LF <- window(ts_LF, start = pre_pandemic_start, end = pre_pandemic_end)
+pandemic_data_LF <- window(ts_LF, start = pandemic_start, end = pandemic_end)
+post_pandemic_LF = window(ts_LF, start = pandemic_end, end = post_pandemic_end)
+
+length(pre_pandemic_LF)
+length(pandemic_data_LF)
+length(post_pandemic_LF)
 
 ```
 By doing this, we have prepped our data set to be used for training various models and testing the accuracy while taking into account the large disturbance in data that was caused due to COVID-19
 
-#### As shown in our project proposal, our data is not stationary, which means differencing is required
 ```{r}
-ur.kpss(pre_pax_counts) %>% summary() #Non-stationary
-ur.kpss(pandemic_pax_counts) %>% summary() #Non-stationary
+num_obs_pre_train = 163
+num_obs_pre_test = 41
+num_obs_pandemic_train = 32
+num_obs_pandemic_test = 9
+num_obs_post_test = 5
 
-ur.kpss(pre_revenue) %>% summary() #Non-stationary
-ur.kpss(pandemic_revenue) %>% summary() #Non-stationary
+#Domestic Passenger Counts
+pre_train_pax <- window(pre_pandemic_pax, start = c(2003, 1), end = c(2016, 7))
+pre_test_pax <- window(pre_pandemic_pax, start = c(2016, 8), end = c(2019, 12))
+ntest_pax <- nrow(pre_test_pax)
 
-ur.kpss(pre_LF) %>% summary() #Non-stationary
-ur.kpss(pandemic_LF) %>% summary() #Non-stationary
+length(pre_train_pax)
+length(pre_test_pax)
+
+#Domestic Revenue
+pre_train_revenue <- window(pre_pandemic_revenue, start = c(2003, 1), end = c(2016, 7))
+pre_test_revenue <- window(pre_pandemic_revenue, start = c(2016, 8), end = c(2019, 12))
+ntest_revenue <- nrow(pre_test_revenue)
+
+length(pre_train_revenue)
+length(pre_test_revenue)
+
+#Load Factor
+pre_train_LF <- window(pre_pandemic_LF, start = c(2003, 1), end = c(2016, 7))
+pre_test_LF <- window(pre_pandemic_LF, start = c(2016, 8), end = c(2019, 12))
+ntest_LF <- nrow(pre_test_LF)
+
+length(pre_train_LF)
+length(pre_test_LF)
+
+```
+
+#### As shown in our project proposal, our not all of our data is not stationary, which means differencing is required
+```{r}
+ur.kpss(pre_train_pax) %>% summary() #Stationary
+
+ur.kpss(pre_train_revenue) %>% summary() #Non-stationary
+
+ur.kpss(pre_train_LF) %>% summary() #Non-stationary
 ```
 #### Conducting seasonal differencing on the pre-pandemic data as it exhbits strong seasonality
 ```{r}
-pre_paxDiff <- diff(log(pre_pax_counts),lag = 12)
-pre_revDiff <- diff(log(pre_revenue),lag = 12)
-pre_LFDiff <- diff(log(pre_LF),lag = 12)
-```
-
-#### Conducting normal differencing on pandemic data
-
-```{r}
-pandemic_paxDiff <- diff(pandemic_pax_counts, lag = 1)
-pandemic_revenueDiff <- diff(pandemic_revenue, lag = 1)
-pandemic_LFDiff <- diff(pandemic_LF, lag = 1)
+pre_paxDiff <- diff(log(pre_train_pax),lag = 12)
+pre_revDiff <- diff(log(pre_train_revenue),lag = 12)
+pre_LFDiff <- diff(log(pre_train_LF),lag = 12)
 ```
 
 #Conduct KPSS testing again to determine effectiveness of differencing
 ```{r}
 ur.kpss(pre_paxDiff) %>% summary() #Stationary
-ur.kpss(pandemic_paxDiff) %>% summary() #Stationary
 
 ur.kpss(pre_revDiff) %>% summary() #Stationary
-ur.kpss(pandemic_revenueDiff) %>% summary() #Stationary
 
 ur.kpss(pre_LFDiff) %>% summary() #Non-Stationary
-ur.kpss(pandemic_LFDiff) %>% summary() #Stationary
 ```
-After conducting differencing, the only dataset that is still not stationary is the pre-pandemic load factor dataset. Because seasonal differencing was already conducted on the dataset, we will now conduct normal differencing.
+After conducting differencing, the only data set that is still not stationary is the pre-pandemic load factor dataset. Because seasonal differencing was already conducted on the dataset, we will now conduct normal differencing.
 
-# Differencing the pre-pandemic load factor dataset
+# Differencing the pre-pandemic load factor and dataset
 ```{r}
+pre_paxDiff_Final <- diff(pre_paxDiff, lag = 1)
+pre_revenueDiff_Final <- diff(pre_revDiff, lag = 1)
 pre_LFDiff_Final <- diff(pre_LFDiff, lag = 1)
 ```
 
 # Conducting another KPSS to determine effectiveness of differencing
 ```{r}
-ur.kpss(pre_paxDiff) %>% summary() #Stationary
-ur.kpss(pandemic_paxDiff) %>% summary() #Stationary
+ur.kpss(pre_paxDiff_Final) %>% summary() #Stationary
 
-ur.kpss(pre_revDiff) %>% summary() #Stationary
-ur.kpss(pandemic_revenueDiff) %>% summary() #Stationary
+ur.kpss(pre_revenueDiff_Final) %>% summary() #Stationary
 
 ur.kpss(pre_LFDiff_Final) %>% summary() #Stationary
-ur.kpss(pandemic_LFDiff) %>% summary() #Stationary
 ```
 Finally, all datasets are now stationary.
+
+# Based on differencing results, all will have d = 2 in ARIMA model
+# Examining the ACF/PACF of the pre-pandemic data to determine which ARIMA to use
+```{r}
+Acf(pre_paxDiff_Final)
+```
+Based on the ACF plot, we will use non-seasonal ARIMA since the spikes rapidly decay. We will use MA(2) process since the spikes are significantly different from 0 up to lag 2
+
+```{r}
+Pacf(pre_paxDiff_Final)
+```
+The PACF plot confirms that we will use non-seasonal ARIMA for the passenger count since the spikes start out very large and then rapidly decay. We will use an AR(1) process since after lag 1, all the spikes are not significantly different from 0.
+
+```{r}
+Acf(pre_revenueDiff_Final)
+```
+We will use a non-seasonal ARIMA for revenue since the ACF plot displays a rapid decay of the spikes. We will use an MA(2) since the spikes after lag 2 are not singificantly different from 0. 
+
+```{r}
+Pacf(pre_revenueDiff_Final)
+```
+Examining the PACF plot confirms that we will use a non-seasonal ARIMA for the revenue model since the first spike is large and the remaining spikes rapidly decay. We will have an AR(1) process since only the first spike is significantly different from 0.
+
+```{r}
+Acf(pre_LFDiff_Final)
+```
+After examining the ACF plot, we will use non-seasonal ARIMA since after the first couple of lags, the majority of the lags remain within the significantly similar to 0 bounds. We will use a MA(5) process since all the lags up to 5 are significantly different from 0.
+
+```{r}
+Pacf(pre_LFDiff_Final)
+```
+The PACF plot confirms that we will use a non-seasonal ARIMA since the first lag starts off large and the subsequent lags rapidly decay. We will use an AR(3) process since the lags significantly drop off after lag 3.
