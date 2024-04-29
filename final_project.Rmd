@@ -325,7 +325,7 @@ length(pre_test_LF)
 
 #### As shown in our project proposal, our not all of our data is not stationary, which means differencing is required
 ```{r}
-ur.kpss(pre_train_pax) %>% summary() #Non-stationary
+ur.kpss(pre_train_pax) %>% summary() #Stationary, but can be improved
 
 ur.kpss(pre_train_revenue) %>% summary() #Non-stationary
 
@@ -340,9 +340,9 @@ pre_LFDiff <- diff(log(pre_train_LF),lag = 12)
 
 #Conduct KPSS testing again to determine effectiveness of differencing
 ```{r}
-ur.kpss(pre_paxDiff) %>% summary() #Stationary
+ur.kpss(pre_paxDiff) %>% summary() #Stationary, but can be improved
 
-ur.kpss(pre_revDiff) %>% summary() #Stationary
+ur.kpss(pre_revDiff) %>% summary() #Stationary, but can be improved
 
 ur.kpss(pre_LFDiff) %>% summary() #Non-Stationary
 ```
@@ -521,6 +521,22 @@ ped_hw_pax <- forecast(hw_pax, h = ntest_pax, level = 0)
 ped_hw_revenue <- forecast(hw_revenue, h = ntest_revenue, level = 0)
 ped_hw_LF <- forecast(hw_LF, h = ntest_LF, level = 0)
 ```
+
+```{r}
+plot(ped_hw_pax)
+plot(ped_hw_revenue)
+plot(ped_hw_LF)
+```
+```{r}
+ped_hw_pax2 <- forecast(hw_pax, h = ntest_pax+46, level = 0)
+ped_hw_revenue2 <- forecast(hw_revenue, h = ntest_revenue+46, level = 0)
+ped_hw_LF2 <- forecast(hw_LF, h = ntest_LF+46, level = 0)
+
+plot(ped_hw_pax2)
+plot(ped_hw_revenue2)
+plot(ped_hw_LF2)
+```
+
 
 # Computing the accuracy for the quadratic regression
 ```{r}
