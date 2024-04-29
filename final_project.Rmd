@@ -149,6 +149,148 @@ length(post_pandemic_LF)
 By doing this, we have prepped our data set to be used for training various models and testing the accuracy while taking into account the large disturbance in data that was caused due to COVID-19
 
 ```{r}
+dim(pandemic_data)
+dim(post_pandemic_data)
+```
+
+
+```{r}
+pre_data = window(ts_airline, start = pre_pandemic_start, end = pre_pandemic_end)
+pan_data = window(ts_airline, start = pandemic_start, end = pandemic_end)
+post_data = window(ts_airline, start = pandemic_end, end = post_pandemic_end)
+
+pd_train <- window(pre_data, start = c(2003, 1), end = c(2016, 7))
+pd_test <- window(pre_data, start = c(2016, 8), end = c(2019, 12))
+pand_train <- window(pan_data, start = c(2020, 1), end = c(2022, 8))
+pand_test <- window(pan_data, start = c(2022, 9), end = c(2023,5))
+pos_test = post_data
+
+hybrid_train = rbind(pd_train, pand_train)
+hybrid_test = rbind(pd_test, pand_test, pos_test)
+```
+
+
+
+```{r}
+ur.kpss(hybrid_train[, "Dom_Pax"]) %>% summary() 
+ur.kpss(hybrid_train[, "Dom_RPM"]) %>% summary() 
+ur.kpss(hybrid_train[, "Dom_LF"]) %>% summary() 
+
+```
+
+Based on the KPSS tests, it seems as though the hybrid training data is stationary. We can confirm based on the ACF plots.
+
+```{r}
+plot(acf(hybrid_train[, "Dom_Pax"]))
+plot(acf(hybrid_train[, "Dom_RPM"]))
+plot(acf(hybrid_train[, "Dom_LF"]))
+
+```
+Based on the ACF plots, there seems to be a clear indication of trend in the data that needs to be differenced out.
+
+```{r}
+hybrid_train_PAX_diff = diff(hybrid_train[, "Dom_Pax"], lag = 1)
+hybrid_train_RPM_diff = diff(hybrid_train[, "Dom_RPM"], lag = 1)
+hybrid_train_LF_diff = diff(hybrid_train[, "Dom_LF"], lag = 1)
+
+autoplot(acf(hybrid_train_PAX_diff))
+autoplot(acf(hybrid_train_RPM_diff))
+autoplot(acf(hybrid_train_LF_diff))
+
+ur.kpss(hybrid_train_PAX_diff) %>% summary() 
+ur.kpss(hybrid_train_RPM_diff) %>% summary() 
+ur.kpss(hybrid_train_LF_diff) %>% summary() 
+
+
+```
+Despite doing first-order differencing, there seems to be some seasonality left as the ACF plot shows periodic spikes. This is also despite the KPSS tests indicating stationarity
+
+```{r}
+hybrid_train_PAX_diff2 = diff(hybrid_train_PAX_diff, lag = 12)
+hybrid_train_RPM_diff2 = diff(hybrid_train_RPM_diff, lag = 12)
+hybrid_train_LF_diff2 = diff(hybrid_train_LF_diff, lag = 12)
+
+ur.kpss(hybrid_train_PAX_diff2) %>% summary() 
+ur.kpss(hybrid_train_RPM_diff2) %>% summary() 
+ur.kpss(hybrid_train_LF_diff2) %>% summary() 
+
+autoplot(acf(hybrid_train_PAX_diff2))
+autoplot(acf(hybrid_train_RPM_diff2))
+autoplot(acf(hybrid_train_LF_diff2))
+```
+
+Although there are some other spikes, we can assume stationarity and move onto fitting the model
+
+```{r}
+hybrid_PAX_model = Arima(hybrid_train[, 'Dom_Pax'], order = c(1, 2, 2), seasonal = list(order = c(0, 2, 2), period = 12))
+hybrid_PAX_model2 = Arima(hybrid_train[, 'Dom_Pax'], order = c(1, 2, 3), seasonal = list(order = c(0, 2, 3), period = 12))
+hybrid_PAX_auto = auto.arima(hybrid_train[, 'Dom_Pax'], 
+           stepwise = F, 
+           approximation = F)
+
+hybrid_PAX_model
+hybrid_PAX_model2
+hybrid_PAX_auto
+
+checkresiduals(hybrid_PAX_model)
+checkresiduals(hybrid_PAX_model2)
+checkresiduals(hybrid_PAX_auto)
+```
+Based on this, it is evident that the custom ARIMA(1,2,2)(0,2,2) for the hybrid dataset relating to PAX worked best among multiple variations.
+
+```{r}
+hybrid_RPM_model = Arima(hybrid_train[, 'Dom_RPM'], order = c(1, 2, 2), seasonal = list(order = c(0, 2, 2), period = 12))
+hybrid_RPM_model2 = Arima(hybrid_train[, 'Dom_RPM'], order = c(1, 2, 0), seasonal = list(order = c(0, 1, 1), period = 12))
+hybrid_RPM_auto = auto.arima(hybrid_train[, 'Dom_RPM'], 
+           stepwise = F, 
+           approximation = F)
+
+hybrid_RPM_model
+hybrid_RPM_model2
+hybrid_RPM_auto
+
+checkresiduals(hybrid_RPM_model)
+checkresiduals(hybrid_RPM_model2)
+checkresiduals(hybrid_RPM_auto)
+```
+Once again the custom ARIMA(1,2,2)(0,2,2) for the hybrid dataset relating to RPM worked best among multiple variations.
+
+```{r}
+hybrid_LF_model = Arima(hybrid_train[, 'Dom_LF'], order = c(1, 2, 2), seasonal = list(order = c(0, 2, 2), period = 12))
+hybrid_LF_model2 = Arima(hybrid_train[, 'Dom_LF'], order = c(2, 1, 2), seasonal = list(order = c(1, 2, 4), period = 12))
+hybrid_LF_auto = auto.arima(hybrid_train[, 'Dom_LF'], 
+           stepwise = F, 
+           approximation = F)
+
+hybrid_LF_model
+hybrid_LF_model2
+hybrid_LF_auto
+
+checkresiduals(hybrid_LF_model)
+checkresiduals(hybrid_LF_model2)
+checkresiduals(hybrid_LF_auto)
+```
+Once again the custom ARIMA model (2, 1, 2)(1, 2, 4) for the hybrid dataset relating to LF worked best among multiple variations.
+
+```{r}
+
+hybrid_PAX_forecast = forecast(hybrid_PAX_model, h = 55)
+plot(hybrid_PAX_forecast)
+hybrid_RPM_forecast = forecast(hybrid_RPM_model, h = 55)
+plot(hybrid_RPM_forecast)
+hybrid_LF_forecast = forecast(hybrid_LF_model2, h = 55)
+plot(hybrid_LF_forecast)
+
+accuracy(hybrid_PAX_forecast$mean, hybrid_test[, "Dom_Pax"])
+accuracy(hybrid_RPM_forecast$mean, hybrid_test[, "Dom_RPM"])
+accuracy(hybrid_LF_forecast$mean, hybrid_test[, "Dom_LF"])
+
+
+```
+
+
+
+```{r}
 num_obs_pre_train = 163
 num_obs_pre_test = 41
 num_obs_pandemic_train = 32
@@ -158,7 +300,7 @@ num_obs_post_test = 5
 #Domestic Passenger Counts
 pre_train_pax <- window(pre_pandemic_pax, start = c(2003, 1), end = c(2016, 7))
 pre_test_pax <- window(pre_pandemic_pax, start = c(2016, 8), end = c(2019, 12))
-ntest_pax <- nrow(pre_test_pax)
+ntest_pax <- length(pre_test_pax)
 
 length(pre_train_pax)
 length(pre_test_pax)
@@ -166,7 +308,7 @@ length(pre_test_pax)
 #Domestic Revenue
 pre_train_revenue <- window(pre_pandemic_revenue, start = c(2003, 1), end = c(2016, 7))
 pre_test_revenue <- window(pre_pandemic_revenue, start = c(2016, 8), end = c(2019, 12))
-ntest_revenue <- nrow(pre_test_revenue)
+ntest_revenue <- length(pre_test_revenue)
 
 length(pre_train_revenue)
 length(pre_test_revenue)
@@ -174,7 +316,7 @@ length(pre_test_revenue)
 #Load Factor
 pre_train_LF <- window(pre_pandemic_LF, start = c(2003, 1), end = c(2016, 7))
 pre_test_LF <- window(pre_pandemic_LF, start = c(2016, 8), end = c(2019, 12))
-ntest_LF <- nrow(pre_test_LF)
+ntest_LF <- length(pre_test_LF)
 
 length(pre_train_LF)
 length(pre_test_LF)
@@ -183,7 +325,7 @@ length(pre_test_LF)
 
 #### As shown in our project proposal, our not all of our data is not stationary, which means differencing is required
 ```{r}
-ur.kpss(pre_train_pax) %>% summary() #Stationary
+ur.kpss(pre_train_pax) %>% summary() #Non-stationary
 
 ur.kpss(pre_train_revenue) %>% summary() #Non-stationary
 
@@ -228,29 +370,162 @@ Finally, all datasets are now stationary.
 ```{r}
 Acf(pre_paxDiff_Final)
 ```
-Based on the ACF plot, we will use non-seasonal ARIMA since the spikes rapidly decay. We will use MA(2) process since the spikes are significantly different from 0 up to lag 2
+Based on the ACF plot, we will use seasonal ARIMA since the spikes rapidly decay. We will use MA(2) process since the spikes are significantly different from 0 up to lag 2
 
 ```{r}
 Pacf(pre_paxDiff_Final)
 ```
-The PACF plot confirms that we will use non-seasonal ARIMA for the passenger count since the spikes start out very large and then rapidly decay. We will use an AR(1) process since after lag 1, all the spikes are not significantly different from 0.
+The PACF plot confirms that we will use seasonal ARIMA for the passenger count since the spikes start out very large and then rapidly decay. We will use an AR(1) process since after lag 1, all the spikes are not significantly different from 0.
 
 ```{r}
 Acf(pre_revenueDiff_Final)
 ```
-We will use a non-seasonal ARIMA for revenue since the ACF plot displays a rapid decay of the spikes. We will use an MA(2) since the spikes after lag 2 are not singificantly different from 0. 
+We will use a seasonal ARIMA for revenue since the ACF plot displays a rapid decay of the spikes. We will use an MA(2) since the spikes after lag 2 are not singificantly different from 0. 
 
 ```{r}
 Pacf(pre_revenueDiff_Final)
 ```
-Examining the PACF plot confirms that we will use a non-seasonal ARIMA for the revenue model since the first spike is large and the remaining spikes rapidly decay. We will have an AR(1) process since only the first spike is significantly different from 0.
+Examining the PACF plot confirms that we will use a seasonal ARIMA for the revenue model since the first spike is large and the remaining spikes rapidly decay. We will have an AR(1) process since only the first spike is significantly different from 0.
 
 ```{r}
 Acf(pre_LFDiff_Final)
 ```
-After examining the ACF plot, we will use non-seasonal ARIMA since after the first couple of lags, the majority of the lags remain within the significantly similar to 0 bounds. We will use a MA(5) process since all the lags up to 5 are significantly different from 0.
+After examining the ACF plot, we will use seasonal ARIMA since after the first couple of lags, the majority of the lags remain within the significantly similar to 0 bounds. We will use a MA(5) process since all the lags up to 5 are significantly different from 0.
 
 ```{r}
 Pacf(pre_LFDiff_Final)
 ```
-The PACF plot confirms that we will use a non-seasonal ARIMA since the first lag starts off large and the subsequent lags rapidly decay. We will use an AR(3) process since the lags significantly drop off after lag 3.
+The PACF plot confirms that we will use a seasonal ARIMA since the first lag starts off large and the subsequent lags rapidly decay. We will use an AR(3) process since the lags significantly drop off after lag 3.
+
+# Recapping chosen ARIMA models and running the models
+Passenger Counts -> ARIMA(1,2,2)
+Revenue -> ARIMA(1,2,2)
+Load Factors -> ARIMA(3,2,5)
+```{r}
+passenger_model <- Arima(pre_train_pax, order = c(1,2,2), seasonal = list(order = c(0, 2, 2), period = 12))
+revenue_model <- Arima(pre_train_revenue, order = c(1,2,2), seasonal = list(order = c(0, 2, 2), period = 12))
+LF_model <- Arima(pre_train_LF, order = c(3,2,5), seasonal = list(order = c(0, 2, 2), period = 12))
+```
+
+# Examining the coefficients of the ARIMA model
+```{r}
+summary(passenger_model)
+summary(revenue_model)
+summary(LF_model)
+```
+
+# Trying different coefficients to try to reduce AICc
+```{r}
+passenger_model2 <- Arima(pre_train_pax, order = c(1,2,2), seasonal = list(order = c(0, 1, 1), period = 12))
+revenue_model2 <- Arima(pre_train_revenue, order = c(1,2,2), seasonal = list(order = c(0, 1, 1), period = 12))
+LF_model2 <- Arima(pre_train_LF, order = c(3,2,5), seasonal = list(order = c(0, 1, 1), period = 12))
+
+passenger_model3 <- Arima(pre_train_pax, order = c(1,2,2), seasonal = list(order = c(1, 2, 4), period = 12))
+revenue_model3 <- Arima(pre_train_revenue, order = c(1,2,2), seasonal = list(order = c(1, 2, 4), period = 12))
+LF_model3 <- Arima(pre_train_LF, order = c(3,2,5), seasonal = list(order = c(2, 2, 5), period = 12))
+
+summary(passenger_model2)
+summary(revenue_model2)
+summary(LF_model2)
+
+summary(passenger_model3)
+summary(revenue_model3)
+summary(LF_model3)
+
+```
+Reducing the coefficients for the ARIMA model produced a slightly worse-performing model in terms of AICc. While increasing the coefficients, slightly improved the AICc, it was only a slight improvement or did not improve the model at all. Thus, the added complexity of the model does not outweigh the improvement in AICc. As a result, we will stick with our original numbers for the ARIMA models.
+
+```{r}
+checkresiduals(passenger_model$residuals)
+checkresiduals(revenue_model$residuals)
+checkresiduals(LF_model$residuals)
+```
+Based on the ACF plot and histogram of the residuals for all three models, the residuals appear to be white noise.
+
+# Forecasting using the models
+```{r}
+pax_prediction <- forecast(passenger_model, h = ntest_pax, level = 0)
+revenue_prediction <- forecast(revenue_model, h = ntest_revenue, level = 0)
+LF_prediction <- forecast(LF_model, h = ntest_LF, level = 0)
+```
+
+```{r}
+plot(pax_prediction)
+plot(revenue_prediction)
+plot(LF_prediction)
+```
+
+
+```{r}
+accuracy(pax_prediction, pre_test_pax)
+accuracy(revenue_prediction, pre_test_revenue)
+accuracy(LF_prediction, pre_test_LF)
+```
+
+```{r}
+pax_future <- forecast(passenger_model, h = ntest_pax+46, level = 0)
+revenue_future <- forecast(revenue_model, h = ntest_revenue+46, level = 0)
+LF_future <- forecast(LF_model, h = ntest_LF+46, level = 0)
+
+plot(pax_future)
+plot(revenue_future)
+plot(LF_future)
+```
+# Creating an exponential smoothing forecast to compare with ARIMA
+```{r}
+expo_pax <- ets(pre_train_pax, model = "ANN", alpha = 0.2)
+expo_revenue <- ets(pre_train_revenue, model = "ANN", alpha = 0.2)
+expo_LF <- ets(pre_train_LF, model = "ANN", alpha = 0.2)
+
+expo_pax_pred <- forecast(expo_pax, h = ntest_pax, level = 0)
+expo_revenue_pred <- forecast(expo_revenue, h = ntest_revenue, level = 0)
+expo_LF_pred <- forecast(expo_LF, h = ntest_LF, level = 0)
+```
+
+```{r}
+accuracy(expo_pax_pred, pre_test_pax)
+accuracy(expo_revenue_pred, pre_test_revenue)
+accuracy(expo_LF_pred, pre_test_LF)
+```
+
+# Building the Quadratic Model to compare with ARIMA
+```{r}
+quad_pax <- tslm(pre_train_pax ~ trend + I(trend^2))
+quad_revenue <- tslm(pre_train_revenue ~ trend + I(trend^2))
+quad_LF <- tslm(pre_train_LF ~ trend + I(trend^2))
+```
+
+# Building the Quadratic Forecast
+```{r}
+quad_pax_pred <- forecast(quad_pax, h = ntest_pax, level = 0)
+quad_revenue_pred <- forecast(quad_revenue, h = ntest_revenue, level = 0)
+quad_LF_pred <- forecast(quad_LF, h = ntest_LF, level = 0)
+```
+
+# Computing the accuracy for the quadratic regression
+```{r}
+accuracy(quad_pax_pred, pre_test_pax)
+accuracy(quad_revenue_pred, pre_test_revenue)
+accuracy(quad_LF_pred, pre_test_LF)
+```
+# Creating a Holt-Winter Model
+```{r}
+hw_pax <- ets(pre_train_pax, model = "MAA", alpha = 0.2)
+hw_revenue <- ets(pre_train_revenue, model = "MAA", alpha = 0.2)
+hw_LF <- ets(pre_train_LF, model = "MAA", alpha = 0.2)
+```
+
+# Creating the prediction for the Holt-Winter Model
+```{r}
+ped_hw_pax <- forecast(hw_pax, h = ntest_pax, level = 0)
+ped_hw_revenue <- forecast(hw_revenue, h = ntest_revenue, level = 0)
+ped_hw_LF <- forecast(hw_LF, h = ntest_LF, level = 0)
+```
+
+# Computing the accuracy for the quadratic regression
+```{r}
+accuracy(ped_hw_pax, pre_test_pax)
+accuracy(ped_hw_revenue, pre_test_revenue)
+accuracy(ped_hw_LF, pre_test_LF)
+```
+Based on the RMSE, the Holt-Winter model preformed better than all the other models, including ARIMA
